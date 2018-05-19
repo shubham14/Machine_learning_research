@@ -9,6 +9,8 @@ from __future__ import print_function, division
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Embedding, LSTM
 
 # network parameters
 num_epochs = 100
@@ -122,4 +124,29 @@ with tf.Session() as sess:
 plt.ioff()
 plt.show()
 
-    
+# keras LSTM 
+train = np.loadtxt("TrainDatasetFinal.txt", delimiter=",")
+test = np.loadtxt("testDatasetFinal.txt", delimiter=",")
+
+# labels
+y_train = train[:,7]
+y_test = test[:,7]
+
+# feature data
+train_spec = train[:,6]
+test_spec = test[:,6]
+
+model = Sequential()
+model.add(LSTM(32, input_shape=(1415684, 8)))
+model.add(LSTM(64, input_dim=1, input_length=1415684, return_sequences=True))
+
+model.add(Dropout(0.5))
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+
+model.compile(loss='binary_crossentropy', optimizer='rmsprop')
+
+model.fit(train_spec, y_train, batch_size=2000, nb_epoch=11)
+score = model.evaluate(test_spec, y_test, batch_size=2000)
+
+  
