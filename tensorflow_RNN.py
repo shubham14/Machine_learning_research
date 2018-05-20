@@ -8,145 +8,86 @@ Created on Wed May 16 22:46:47 2018
 from __future__ import print_function, division
 import numpy as np
 import tensorflow as tf
+from tensorflow.contrib import rnn
+from tensorflow.python.ops import rnn_cell
 import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Embedding, LSTM
+from tensorflow.examples.tutorials.mnist import input_data
 
-# network parameters
-num_epochs = 100
-total_length = 50000
-truncated_backprop_length = 15
-state_size = 4
-num_classes = 2
-echo_step = 3
-batch_size = 5
-num_batches = total_length//batch_size//truncated_backprop_length
+# mnist load data
+mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
 
-def generateData():
-    x = np.array(np.random.choice(2, total_length, p=[0.5, 0.5]))
-    y = np.roll(x, echo_step)
-    y[0:echo_step] = 0
-    x = x.reshape((batch_size, -1))
-    y = y.reshape((batch_size, -1))
+# training parameters
+learning_rate = 0.001
+training_steps = 10000
+batch_size = 128
+display_step = 200
+
+# network parameter
+num_input = 28
+timesteps = 28
+num_hidden = 128
+
+# 10 classes for mnist classification
+num_classes = 10
+
+# 1 for single RNN cell and 2 for stacked RNN cell
+choice = int(input())
+
+#tf Graph inputX
+X = tf.placeholder("float", [None, timesteps, num_input])
+Y = tf.placeholder("float", [None, num_classes])
+
+weights = {
+        'out': tf.Variable(tf.random.normal([num_hidden, num_classes]))
+        }
+
+biases = {
+        'out': tf.Variable(tf.random.normal([num_classes]))
+        }
+
+def RNN(X, weights, biases):
     
-    return (x, y)
-
-# input-output placeholder
-batchX_palceholder = tf.placeholder(tf.float32, [batch_size, 
-                                                 truncated_backprop_length])
-batchY_placeholder = tf.placeholder(tf.float32, [batch_size,
-                                                 truncated_backprop_length])
-init_state = tf.placeholder(tf.float32, [batch_size, state_size])
-
-# Variables to be optimized
-W = tf.Variable(np.random.rand(state_size+1, state_size), dtype=tf.float32)
-b = tf.Variable(np.zeros((1, state_size)), dtype=tf.float32)
-
-W2 = tf.Variable(np.random.rand(state_size, num_classes), dtype=tf.float32)
-b2 = tf.Variable(np.zeros((1, num_classes)), dtype=tf.float32)
-
-# Unpack columns
-inputs_series = tf.unpack(batchX_placeholder, axis=1)
-labels_series = tf.unpack(batchY_placeholder, axis=1)
-
-current_state = init_state
-states_series = []
-for current_input in inputs_series:
-    current_input = tf.reshape(current_input, [batch_size, 1])
-    concat_states = tf.concat(1, [current_input, current_state])
-    next_state = tf.tanh(tf.matmul(concat_states, W) + b)
-    states_series.append(next_state)
-    current_state = next_state
+    x = tf.unstack(x, timesteps, 1)
+    lstm_cell = rnn.BasicLSTMCell(num_hidden, forget_bias=1.0)
+    output, states = rnn.static_rnn(lstm_cell, x, dtype=tf.float32)
+    return tf.matmul(outputs[-1], weights['out']) + biases['out']    
     
-logits_series = [tf.matmul(state, W2) + b2 for state in states_series] #Broadcasted addition
-predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
 
-losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(logits, labels) for logits, labels in zip(logits_series,labels_series)]
-total_loss = tf.reduce_mean(losses)
+logits = RNN(X, weights, biases)
+pred = tf.nn.softmax(logits)
 
-train_step = tf.train.AdagradOptimizer(0.3).minimize(total_loss)
+# optimizer variables
+loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=Y))
+optimizer = tf.train.GradientDescentOptimzer(learning_rate=learning_rate)
+train_op = optimizer.minimize(loss_op)
 
-def plot(loss_list, predictions_series, batchX, batchY):
-    plt.subplot(2, 3, 1)
-    plt.cla()
-    plt.plot(loss_list)
+# model evaluation parameters
+correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(Y, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-    for batch_series_idx in range(5):
-        one_hot_output_series = np.array(predictions_series)[:, batch_series_idx, :]
-        single_output_series = np.array([(1 if out[0] < 0.5 else 0) for out in one_hot_output_series])
-
-        plt.subplot(2, 3, batch_series_idx + 2)
-        plt.cla()
-        plt.axis([0, truncated_backprop_length, 0, 2])
-        left_offset = range(truncated_backprop_length)
-        plt.bar(left_offset, batchX[batch_series_idx, :], width=1, color="blue")
-        plt.bar(left_offset, batchY[batch_series_idx, :] * 0.5, width=1, color="red")
-        plt.bar(left_offset, single_output_series * 0.3, width=1, color="green")
-
-    plt.draw()
-    plt.pause(0.0001)
-
+init = tf.global_variables_initializer()
 
 with tf.Session() as sess:
-    sess.run(tf.initialize_all_variables())
-    plt.ion()
-    plt.figure()
-    plt.show()
-    loss_list = []
+    
+    sess.run(init)
+    for step in range(1, training_steps+1):
+        batch_x, batch_y = mnist.train.next_batch(batch_size)
+        batch_x = batch_x.reshape((batch_size, timesteps, num_input))
+        sess.run(train_op, feed_dict={X: batch_x, Y: batch_y})
+        if step%display_step == 0 or step == 1:
+            
+            # printing the values of loss and accuracy at a particular time interval
+            # Oh!! Keras is far better in this aspect
+            loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
+                                                                 Y: batch_y})
+            print("Step " + str(step) + ", Minibatch Loss= " + \
+                  "{:.4f}".format(loss) + ", Training Accuracy= " + \
+                  "{:.3f}".format(acc))
 
-    for epoch_idx in range(num_epochs):
-        x,y = generateData()
-        _current_state = np.zeros((batch_size, state_size))
-
-        print("New data, epoch", epoch_idx)
-
-        for batch_idx in range(num_batches):
-            start_idx = batch_idx * truncated_backprop_length
-            end_idx = start_idx + truncated_backprop_length
-
-            batchX = x[:,start_idx:end_idx]
-            batchY = y[:,start_idx:end_idx]
-
-            _total_loss, _train_step, _current_state, _predictions_series = sess.run(
-                [total_loss, train_step, current_state, predictions_series],
-                feed_dict={
-                    batchX_placeholder:batchX,
-                    batchY_placeholder:batchY,
-                    init_state:_current_state
-                })
-
-            loss_list.append(_total_loss)
-
-            if batch_idx%100 == 0:
-                print("Step",batch_idx, "Loss", _total_loss)
-                plot(loss_list, _predictions_series, batchX, batchY)
-
-plt.ioff()
-plt.show()
-
-# keras LSTM 
-train = np.loadtxt("TrainDatasetFinal.txt", delimiter=",")
-test = np.loadtxt("testDatasetFinal.txt", delimiter=",")
-
-# labels
-y_train = train[:,7]
-y_test = test[:,7]
-
-# feature data
-train_spec = train[:,6]
-test_spec = test[:,6]
-
-model = Sequential()
-model.add(LSTM(32, input_shape=(1415684, 8)))
-model.add(LSTM(64, input_dim=1, input_length=1415684, return_sequences=True))
-
-model.add(Dropout(0.5))
-model.add(Dense(1))
-model.add(Activation('sigmoid'))
-
-model.compile(loss='binary_crossentropy', optimizer='rmsprop')
-
-model.fit(train_spec, y_train, batch_size=2000, nb_epoch=11)
-score = model.evaluate(test_spec, y_test, batch_size=2000)
-
-  
+    test_len = 128
+    test_data = mnist.test.images[:test_len].reshape((-1, timesteps, num_input))
+    test_label = mnist.test.labels[:test_len]
+    print("Testing Accuracy:", \
+        sess.run(accuracy, feed_dict={X: test_data, Y: test_label}))
