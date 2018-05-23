@@ -32,7 +32,7 @@ num_hidden = 128
 # 10 classes for mnist classification
 num_classes = 10
 
-# 1 for single RNN cell and 2 for stacked RNN cell
+# 1 for single RNN cell and 2 for stacked dynamic RNN cell
 choice = int(input())
 
 #tf Graph inputX
@@ -50,8 +50,19 @@ biases = {
 def RNN(X, weights, biases):
     
     x = tf.unstack(x, timesteps, 1)
-    lstm_cell = rnn.BasicLSTMCell(num_hidden, forget_bias=1.0)
-    output, states = rnn.static_rnn(lstm_cell, x, dtype=tf.float32)
+    if choice == 1:
+        lstm_cell = rnn.BasicLSTMCell(num_hidden, forget_bias=1.0)
+        output, states = rnn.static_rnn(lstm_cell, x, dtype=tf.float32)
+    else:
+        lstm_cell = rnn_cell.LSTMCell(num_hidden, state_is_tuple=True)
+        stacked_cell = rnn_cell.MultiRNNCell([LSTM_cell] * timesteps,
+                                             state_is_tuple=True)
+        outputs, states = rnn.dynamic_rnn(stacked_cell,
+                                          inputs=x,
+                                          dtype=tf.float32,
+                                          scope='lstm_layer',
+                                          initial_state=states)
+        
     return tf.matmul(outputs[-1], weights['out']) + biases['out']    
     
 
