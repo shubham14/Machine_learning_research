@@ -8,7 +8,7 @@ Created on Tue Jul 17 09:42:11 2018
 from __future__ import print_function, division
 import torch
 import torch.nn as nn
-import torch.optim import lr_scheduler
+from torch.optim import lr_scheduler
 import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
@@ -16,7 +16,13 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+import argparse
 
-input_tensor = Input(shape=(224, 224, 3))
-model = InceptionV3(input_tensor=input_tensor, weights='imagenet',
-                    include_top=True)
+model_conv = torchvision.models.inception_v3(pretrained='imagenet')
+
+if freeze_layers:
+    for i, param in model_conv.named_parameters():
+        param.requires_grad = False
+        
+num_ftrs = model_conv.fc.in_features
+model_conv.fc = nn.Linear(num_ftrs, n_class)
