@@ -2,11 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5bdbe9e7-282e-4da1-a813-3ea8d2952bf8" name="Default" comment="">
-      <change beforePath="" afterPath="$PROJECT_DIR$/TextToImage/Text_feature_extraction.py" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" afterPath="$PROJECT_DIR$/.idea/vcs.xml" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change beforePath="$PROJECT_DIR$/NLP/Reuters_Analysis" afterPath="$PROJECT_DIR$/NLP/Reuters_Analysis" />
       <change beforePath="$PROJECT_DIR$/NLP/Reuters_Analysis/infoGan.py" afterPath="$PROJECT_DIR$/NLP/Reuters_Analysis/infoGan.py" />
+      <change beforePath="$PROJECT_DIR$/TextToImage/Text_feature_extraction.py" afterPath="$PROJECT_DIR$/TextToImage/Text_feature_extraction.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -20,8 +18,8 @@
       <file leaf-file-name="Text_feature_extraction.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/TextToImage/Text_feature_extraction.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="972">
-              <caret line="42" column="51" lean-forward="false" selection-start-line="42" selection-start-column="51" selection-end-line="42" selection-end-column="51" />
+            <state relative-caret-position="937">
+              <caret line="46" column="0" lean-forward="false" selection-start-line="46" selection-start-column="0" selection-end-line="46" selection-end-column="0" />
               <folding>
                 <element signature="e#0#23#0" expanded="true" />
               </folding>
@@ -52,8 +50,7 @@
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="2330" />
-    <option name="y" value="27" />
+    <option name="x" value="1906" />
     <option name="width" value="1948" />
     <option name="height" value="2074" />
   </component>
@@ -146,7 +143,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="2330" y="27" width="1948" height="2074" extended-state="0" />
+    <frame x="1906" y="0" width="1948" height="2074" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.33980045" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -213,8 +210,8 @@
     <entry file="file://$PROJECT_DIR$/tensorflow_MNIST.py" />
     <entry file="file://$PROJECT_DIR$/TextToImage/Text_feature_extraction.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="972">
-          <caret line="42" column="51" lean-forward="false" selection-start-line="42" selection-start-column="51" selection-end-line="42" selection-end-column="51" />
+        <state relative-caret-position="937">
+          <caret line="46" column="0" lean-forward="false" selection-start-line="46" selection-start-column="0" selection-end-line="46" selection-end-column="0" />
           <folding>
             <element signature="e#0#23#0" expanded="true" />
           </folding>
