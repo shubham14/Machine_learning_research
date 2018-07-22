@@ -40,6 +40,6 @@ rnn = RNN(n_letters, n_hidden, n_categories)
 input = lineToTensor('Albert')
 hidden = torch.zeros(1, n_hidden)
 
-output, next_hidden = rnn(input[0], hidden)S
+output, next_hidden = rnn(input[0], hidden)
 print(output)
     

@@ -9,8 +9,12 @@ import torch
 import torch.nn as nn
 import numpy as np
 import random
+import os
 import time
 import math
+import glob
+from data_prepper import *
+from model import *
 
 n_hidden = 128
 learning_rate = 0.005
@@ -20,6 +24,16 @@ plot_every = 1000
 
 current_loss = 0
 all_losses = []
+
+l = glob.glob('/Users/Shubham/Desktop/Machine_learning_research/data/Char_RNN/names/*.txt')
+
+all_categories = []
+for filename in l:
+    category = os.path.splitext(os.path.basename(filename))[0]
+    all_categories.append(category)
+    lines = readLines(filename)
+    category_lines[category] = lines
+    
 
 def timeSince(since):
     now = time.time()
@@ -53,18 +67,13 @@ criterion = nn.NLLLoss()
 
 def train(category_tensor, line_tensor):
     hidden = rnn.initHidden()
-    
-    rnn.zero_grad()
-    
+    opt.zero_grad()
     for i in range(line_tensor.size()[0]):
         output, hidden = rnn(line_tensor[i], hidden)
-        
     loss = criterion(output, category_tensor)
     loss.backward()
-    
-    for p in rnn.parameters():
-        p.data_add(-learning_rate, p.grad.data)
-    return output, loss.item()
+    opt.step()
+    return output, loss.data[0]
 
 start = time.time()
 

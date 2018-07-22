@@ -11,6 +11,7 @@ import os
 from io import open
 import unicodedata
 import string
+import torch
 
 l = glob.glob('/Users/Shubham/Desktop/Machine_learning_research/data/Char_RNN/names/*.txt')
 
@@ -42,7 +43,7 @@ for filename in l:
 n_categories = len(all_categories)
 
 def letter_to_ind(letter):
-    return all_letters.find(letter)
+    return letters.find(letter)
 
 def letter_to_tensor(letter):
     t = torch.zeros(1, len(letters))

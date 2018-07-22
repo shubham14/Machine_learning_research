@@ -9,7 +9,13 @@ import sys
 from model import *
 from data_prepper import *
 
-rnn = torch.load('char-rnn-classification.pt')
+rnn = torch.load('char-rnn.pt')
+
+all_categories = []
+for filename in findFiles('/Users/Shubham/Desktop/Machine_learning_research/data/Char_RNN/names/*.txt'):
+    category = filename.split('/')[-1].split('.')[0]
+    all_categories.append(category)
+    
 
 # Just return an output given a line
 def evaluate(line_tensor):
