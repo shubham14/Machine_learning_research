@@ -14,6 +14,9 @@ import string
 
 l = glob.glob('/Users/Shubham/Desktop/Machine_learning_research/data/Char_RNN/names/*.txt')
 
+letters = string.ascii_letters + ".,;'-"
+n_letters = len(letters)
+
 def unicodeToAscii(s):
     return ''.join(
             c for c in unicodedata.normalize('NFD', s)
@@ -37,7 +40,6 @@ for filename in l:
     category_lines[category] = lines
 
 n_categories = len(all_categories)
-print (n_categories)
 
 def letter_to_ind(letter):
     return all_letters.find(letter)
