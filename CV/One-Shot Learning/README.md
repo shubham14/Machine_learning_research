@@ -14,7 +14,7 @@ To replicate the results, run python main.py on the terminal (Ubuntu, Mac OSX) o
 
 ## Author
 
-* **Shubham Dash** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Shubham Dash**
 
 ## License
 
