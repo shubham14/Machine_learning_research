@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Created on Sat Jul 21 18:16:07 2018
 
@@ -13,7 +14,7 @@ import torch
 import torch.nn as nn
 from data_prepper import *
 
-letters = string.ascii_letters + ".,;'"
+letters = string.ascii_letters + ".,;'-"
 
 
 class RNN(nn.Module):
@@ -23,7 +24,8 @@ class RNN(nn.Module):
         self.i2h = nn.Linear(input_size + hidden_size, hidden_size)
         self.i2o = nn.Linear(input_size + hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
-        
+      
+    # The recursive connection for hidden layers
     def forward(self, input, hidden):
         combined = torch.cat((input, hidden), 1)
         hidden = self.i2h(combined)

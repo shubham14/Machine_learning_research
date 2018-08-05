@@ -27,7 +27,7 @@ class Sub(_Merge):
             raise ValueError('A Subtract Layer is called on exactly 2 inputs')
             
     def _merge_function(self, inputs):
-        if len(input_shape) != 2:
+        if len(inputs) != 2:
             raise ValueError('A Subtract Layer is called on exactly 2 inputs')
         return K.abs(inputs[0] - inputs[1])
 
@@ -36,7 +36,7 @@ class SiameseNetWork:
     
     # define parameters
     def __init__(self, n_filters, n_rows, n_cols, n_ch, fc_units,
-                 beta1, beta2, lr=1e-3, n_out_ch=1, **kwargs):
+                 beta1, beta2, lr=1e-3, n_out_ch=1):
         self.n_filters = n_filters
         self.lr = lr
         self.n_rows = n_rows
@@ -48,47 +48,52 @@ class SiameseNetWork:
     
     def net1(self):
         inp = Input(shape=(self.n_rows, self.n_cols, self.n_ch))
-        x = Conv2D(self.n_filters[0], (10, 10), strides=1, padding='same')(x)
+        x = Conv2D(self.n_filters[0], (10, 10), strides=1, padding='same')(inp)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=2)(x)
         x = Conv2D(self.n_filters[1], (7, 7), strides=1, padding='same')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=2)(x)
-        x = Conv2D(self.filters[2], (4, 4), strides=1, padding='same')(x)
+        x = Conv2D(self.n_filters[2], (4, 4), strides=1, padding='same')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=2)(x)
-        x = Conv2D(self.filters[3], (4, 4), strides=1, padding='same')(x)
+        x = Conv2D(self.n_filters[3], (4, 4), strides=1, padding='same')(x)
         x = Flatten()(x)
         g_out = Dense(self.fc_units, activation='sigmoid')(x)
         Net1 = Model(inp, g_out, name='network1')
+        print (Net1.summary())
         return Net1
     
     def net2(self):
         inp = Input(shape=(self.n_rows, self.n_cols, self.n_ch))
-        x = Conv2D(self.n_filters[0], (10, 10), strides=1, padding='same')(x)
+        x = Conv2D(self.n_filters[0], (10, 10), strides=1, padding='same')(inp)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=2)(x)
         x = Conv2D(self.n_filters[1], (7, 7), strides=1, padding='same')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=2)(x)
-        x = Conv2D(self.filters[2], (4, 4), strides=1, padding='same')(x)
+        x = Conv2D(self.n_filters[2], (4, 4), strides=1, padding='same')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=2)(x)
-        x = Conv2D(self.filters[3], (4, 4), strides=1, padding='same')(x)
+        x = Conv2D(self.n_filters[3], (4, 4), strides=1, padding='same')(x)
         x = Flatten()(x)
         g_out = Dense(self.fc_units, activation='sigmoid')(x)
         Net2 = Model(inp, g_out, name='network2')
+        print (Net2.summary())
         return Net2
         
     def diff_net(self):
         # instantiating the networks
-        inp1 = Input(shape=self.net1.layers[0].input_shape[1:])
-        inp2 = Input(shape=self.net2.layers[0].inout_shape[1:])
-        net1_output = self.net1(inp1)
-        net2_output = self.net2(inp2)
+        inp1 = Input(shape=self.net1().layers[0].input_shape[1:])
+        inp2 = Input(shape=self.net2().layers[0].input_shape[1:])
+        Net1 = self.net1()
+        Net2 = self.net2()
+        net1_output = Net1(inp1)
+        net2_output = Net2(inp2)
         sub = Sub()([net1_output, net2_output])
-        sub_out = Activation('sigmoid')(sub)
+        sub_out = Dense(1, activation='sigmoid')(sub)
         siamese_net = Model([inp1, inp2], sub_out)
-        opt = Adam(lr=self.lr, beta1=self.beta1, beta2=self.beta2)
+        opt = Adam(lr=self.lr, beta_1=self.beta1, beta_2=self.beta2)
         siamese_net.compile(optimizer=opt, loss='binary_crossentropy')
+        print (siamese_net.summary())
         return siamese_net

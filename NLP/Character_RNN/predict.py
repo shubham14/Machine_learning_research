@@ -8,15 +8,16 @@ Created on Sat Jul 21 21:38:14 2018
 import sys
 from model import *
 from data_prepper import *
+from torch.autograd import Variable
 
 rnn = torch.load('char-rnn.pt')
+l = glob.glob('/Users/Shubham/Desktop/Machine_learning_research/data/Char_RNN/names/*.txt')
 
 all_categories = []
-for filename in findFiles('/Users/Shubham/Desktop/Machine_learning_research/data/Char_RNN/names/*.txt'):
+for filename in l:
     category = filename.split('/')[-1].split('.')[0]
     all_categories.append(category)
     
-
 # Just return an output given a line
 def evaluate(line_tensor):
     hidden = rnn.initHidden()

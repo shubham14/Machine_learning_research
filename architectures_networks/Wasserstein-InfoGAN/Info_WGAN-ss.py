@@ -23,6 +23,7 @@ from keras.utils import generic_utils
 from keras.utils import plot_model
 from keras.optimizers import *
 from keras import backend as K
+import argparse
 K.set_image_data_format('channels_last')
 
 # rb_mast orientation for 'unrotation'
@@ -45,6 +46,15 @@ def removeDuplicates(dep, data):
     dep = dep[idxUnq]
     data = data[idxUnq]
     return dep, data
+
+
+def sampling(args):
+    # z_log_var is taken as 0
+    z_mean = args
+    batch = K.shape(z_mean)[0]
+    dim = K.int_shape(z_mean)[1]
+    epsilon = K.random_normal(shape=(batch, dim))
+    return z_mean + K.exp(0.) * epsilon
 
 
 # interpolate azimuthal data
@@ -198,9 +208,9 @@ def build_disc_aux_mnist_test(n_class, n_cont, n_rows, n_cols, n_in_ch=1, n_last
     x = LeakyReLU(alpha=leaky_relu_alpha)(x)
     f_out_mean = Dense(n_cont)(x)
     f_out_logstd = Dense(n_cont)(x)
-    f_out_mean = K.mean(f_out_mean, axis=1)
-    f_out_logstd = K.mean(f_out_logstd, axis=1)
-    f_out_gaussian = concatenate([f_out_mean, f_out_logstd])
+    f_out_gaussian = Lambda(sampling, output_shape=(n_cont, ), name='cont')([z_mean, z_log_var])
+    # similar to averaging layer 
+    f_out_gaussian = Dense(1)(f_out_gaussian)
 
     # discriminator model
     discriminator = Model(d_in, d_out_val, name='discriminator')
@@ -246,10 +256,11 @@ def build_disc_aux(n_class, n_cont, n_rows, n_cols, n_in_ch=1, n_last_conv_ch=12
     x = Dense(1024)(d_out_base)
     x = LeakyReLU(alpha=leaky_relu_alpha)(x)
     f_out_mean = Dense(n_cont)(x)
+    # why approximating the log-std
     f_out_logstd = Dense(n_cont)(x)
-    f_out_mean = K.mean(f_out_mean, axis=1)
-    f_out_logstd = K.mean(f_out_logstd, axis=1)
-    f_out_gaussian = concatenate([f_out_mean, f_out_logstd])
+    f_out_gaussian = Lambda(sampling, output_shape=(n_cont, ), name='cont')([f_out_mean, f_out_logstd])
+    # similar to averaging layer 
+    f_out_gaussian = Dense(1)(f_out_gaussian)
 
     # discriminator model
     discriminator = Model(d_in, d_out_val, name='discriminator')
@@ -262,7 +273,7 @@ def build_disc_aux(n_class, n_cont, n_rows, n_cols, n_in_ch=1, n_last_conv_ch=12
     classifier.summary()
 
     # feature extractor model
-    feature_extractor = Model(d_in, f_out_gaussian, name='feature_extractor')
+    feature_extractor = Model(d_in, [f_out_gaussian, f_out_mean], name='feature_extractor')
     print('Summary of Feature Extractor (for InfoWGAN-GP)')
     feature_extractor.summary()
 
@@ -281,9 +292,9 @@ def train_infowgangp(image_set, label_set, generator, generator_opt, discriminat
     disc_out_val_fake = discriminator(gen_out)
     class_out_softmax_real = classifier(real_in)
     class_out_softmax_fake = classifier(gen_out)
-    feature_out_gaussian = feature_extractor(gen_out)
-    feature_out_mean = feature_out_gaussian[:, :, 0]
-    feature_out_logstd = feature_out_gaussian[:, :, 1]
+    [feature_out_gaussian, feature_out_mean] = feature_extractor(gen_out)
+    # feature_out_mean = feature_out_gaussian[:, :, 0]
+    # feature_out_logstd = feature_out_gaussian[:, :, 1]
 
     # gradient penalty
     eps_in = K.placeholder(shape=(None, 1, 1, 1))
@@ -297,8 +308,9 @@ def train_infowgangp(image_set, label_set, generator, generator_opt, discriminat
     info_penalty_cat_real = K.mean(-K.sum(K.log(class_out_softmax_real + K.epsilon()) * label_in, axis=1))
     info_penalty_cat_fake = K.mean(-K.sum(K.log(class_out_softmax_fake + K.epsilon()) * gen_in_cat, axis=1))
     info_penalty_cat = info_penalty_cat_real + info_penalty_cat_fake
-    cont_norm = (gen_in_cont - feature_out_mean) / (K.exp(feature_out_logstd) + K.epsilon())
-    info_penalty_cont = K.mean(K.sum(feature_out_logstd + 0.5 * K.square(cont_norm), axis=1))
+    # feature_out_logstd is taken as 0
+    cont_norm = (gen_in_cont - feature_out_mean) / (K.exp(0) + K.epsilon())
+    info_penalty_cont = K.mean(K.sum(0. + 0.5 * K.square(cont_norm), axis=1))
     info_penalty = info_penalty_cat + info_penalty_cont
 
     # loss
@@ -490,6 +502,10 @@ if __name__ == '__main__':
 
     dataSet = np.reshape(dataInput, (Ndepth_new * Naz_new, Ntime_new, Nslow_new, Nfreq_new))
     std_label = np.reshape(std_label, (a*Naz, b/Naz))
+
+    # mean of the 9-dimensional features of the continous labels
+    std_label = np.mean(std_label, axis=1)
+    
     generator = build_generator(n_class, n_cont, Ntime, Nslow, n_out_ch=Nfreq, n_first_conv_ch=256,
                                            dim_noise=dim_noise)
     generator_opt = Adam(g_lr, g_beta1, g_beta2)

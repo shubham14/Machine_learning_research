@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 """
 Created on Mon Jul  2 20:30:46 2018
 
@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import scipy.io as sio
 from os import path
 import os
-
 os.environ['KERAS_BACKEND'] = 'tensorflow'
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.manifold import TSNE
@@ -28,14 +27,14 @@ import keras
 from keras.datasets import *
 from keras.models import Model, Sequential
 from keras.layers import Input, Dense, Dropout, Reshape, Flatten, Activation, Lambda, GlobalAveragePooling2D
-from keras.layers.convolutional import Conv1D, Conv2D, Conv2DTranspose
+from keras.layers.convolutional import Conv1D, Conv2D, Conv2DTranspose, Conv1DTranspose
 from keras.layers.convolutional import MaxPooling2D, UpSampling2D
 from keras.layers import BatchNormalization
 from keras.layers.merge import add, concatenate
 from keras.layers.advanced_activations import LeakyReLU, ReLU, ELU
 from keras.utils import np_utils
 from keras.utils import generic_utils
-from keras.layers.merge import _Merge, Maximum
+from keras.layers.merge import _Merge
 from keras.utils import plot_model
 from keras.optimizers import *
 from keras.engine.topology import Layer
@@ -173,50 +172,43 @@ class WeightedAverage(_Merge):
         return (inputs[0]) + (0.1 * inputs[1])
 
 
-# custom loss layer for calculating the Mean Squared error
-class MSELayer(Layer):
-
-    def __init__(self, output_dim, **kwargs):
-        self.output_dim = output_dim
-        super(MSELayer, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        self.kernel = self.add_weight(name='kernel', shape=(input_shape[1], self.output_dim),
-                                                            initializer='uniform',
-                                                            trainable=True)
-        super(MSELayer, self).build(input_shape)
-
-    def call(self, x, y):
-        return K.mean(K.square(x - y), axis=-1)
-
-    def compute_output_shape(self, input_shape):
-        return input_shape[0], self.output_dim
-
-
 # freeze weights in the discriminator for stacked training
 def set_trainable(net, val):
     net.trainable = val
     for l in net.layers:
         l.trainable = val
 
+def CT_Loss(inputs):
+    a = inputs[0]
+    b = inputs[1]
+    soft_a = inputs[2]
+    soft_b = inputs[3]
+    mse_first = tf.reduce_mean(tf.squared_difference(a, b))
+    mse_second = tf.reduce_mean(tf.squared_difference(soft_a, soft_b))
+
+#    weighted_sum = WeightedAverage()([mse_first, mse_second])
+    weighted_sum = tf.add(mse_first,  tf.multiply(0.1 , mse_second))
+    CT_output = tf.maximum(0., weighted_sum)
+    return CT_output
+    
 
 def build_generator(n_rows, n_cols, n_out_ch=1, n_first_conv_ch=128, dim_noise=100, dim_cat=n_class):
     g_in_noise = Input(shape=(dim_noise,))
     g_in_cat = Input(shape=(dim_cat,))
     g_in = concatenate([g_in_noise, g_in_cat])
-    x = Dense(n_first_conv_ch * int(n_rows/8) * int(n_cols/8))(g_in)
-    x = Reshape((int(n_rows/8), int(n_cols/8), n_first_conv_ch))(x)
+    x = Dense(n_first_conv_ch * int(n_rows/4) * int(n_cols/4))(g_in)
+    x = Reshape((int(n_rows/4), int(n_cols/4), n_first_conv_ch))(x)
     x = BatchNormalization(axis=-1, momentum=0.8)(x)
     x = LeakyReLU(alpha=0.2)(x)
-    x = Conv2DTranspose(int(n_first_conv_ch / 2), (3, 3), strides=2, padding='same')(x)
+    x = Conv1DTranspose(int(n_first_conv_ch / 4), 9, strides=4)(x)
     x = BatchNormalization(axis=-1, momentum=0.8)(x)
     x = LeakyReLU(alpha=0.2)(x)
-    x = Conv2DTranspose(int(n_first_conv_ch / 4), (3, 3), strides=2, padding='same')(x)
+    x = Conv1DTranspose(int(n_first_conv_ch / 16), 9, strides=4)(x)
     x = BatchNormalization(axis=-1, momentum=0.8)(x)
     x = LeakyReLU(alpha=0.2)(x)
-    x = Conv2DTranspose(int(n_first_conv_ch / 8), (3, 3), strides=2, padding='same')(x)
+    x = Conv1DTranspose(int(n_first_conv_ch / 64), 9, strides=4)(x)
     x = BatchNormalization(axis=-1, momentum=0.8)(x)
-    g_out = Conv2DTranspose(n_out_ch, (3, 3), strides=1, padding='same', activation='sigmoid')(x)
+    g_out = Conv1DTranspose(n_out_ch, 9, strides=1, padding='same', activation='sigmoid')(x)
     generator = Model([g_in_noise, g_in_cat], g_out, name='generator')
     print ('Summary of Generator (for InfoGAN)')
     generator.summary()
@@ -227,23 +219,23 @@ def build_discriminator(n_rows, n_cols, n_in_ch=1, n_last_conv_ch=128, leaky_rel
     d_opt = Adam(lr=lr, beta_1=beta_1)
     d_in = Input(shape=(n_rows, n_cols, n_in_ch))
 
-    x = Conv2D(int(n_last_conv_ch / 2), (3, 3), padding='same')(d_in)
+    x = Conv1D(int(n_last_conv_ch / 4), 9, strides= 4, padding='same')(d_in)
     x = LeakyReLU()(x)
     x = Dropout(rate=drop_ratio)(x)
-    x = Conv2D(int(n_last_conv_ch), (3, 3), strides=2)(x)
+    x = Conv1D(int(n_last_conv_ch), 9, strides=4)(x)
     x = LeakyReLU()(x)
     x = Dropout(rate=drop_ratio)(x)
-    x = Conv2D(n_last_conv_ch, (3, 3), strides=2, padding='same')(x)
+    x = Conv1D(n_last_conv_ch, 9, strides=4, padding='same')(x)
     x = LeakyReLU()(x)
 
 
-    y = Conv2D(int(n_last_conv_ch / 2), (3, 3), padding='same')(d_in)
+    y = Conv1D(int(n_last_conv_ch / 2), 9, strides=4, padding='same')(d_in)
     y = LeakyReLU()(y)
     y = Dropout(rate=drop_ratio)(y)
-    y = Conv2D(int(n_last_conv_ch), (3, 3), strides=2)(y)
+    y = Conv1D(int(n_last_conv_ch), 9, strides=4)(y)
     y = LeakyReLU()(y)
     y = Dropout(rate=drop_ratio)(y)
-    y = Conv2D(n_last_conv_ch, (3, 3), strides=2, padding='same')(y)
+    y = Conv1D(n_last_conv_ch, 9, strides=4, padding='same')(y)
     y = LeakyReLU()(y)
 
     x_flat = Flatten()(x)
@@ -253,17 +245,14 @@ def build_discriminator(n_rows, n_cols, n_in_ch=1, n_last_conv_ch=128, leaky_rel
 
 
     y_flat = Flatten()(y)
-    # d_out_base = Dense(1024)(x_flat)
-    # d_out_disc = LeakyReLU(alpha=leaky_relu_alpha)(d_out_base)
+    d_out_base_y = Dense(1024)(y_flat)
+    d_out_disc_y = LeakyReLU(alpha=leaky_relu_alpha)(d_out_base_y)
     softmax_y = Dense(n_class, activation='softmax')(y_flat)
 
-    mse_first = MSELayer(x_flat, y_flat)
-    mse_second = MSELayer(softmax_x, softmax_y)
-
-    weighted_sum = WeightedAverage()([mse_first, mse_second])
-    a, _ = weighted_sum.output_shape
-    CT_output = Maximum()[K.zeros(a), weighted_sum]
-
+#    mse_first = MSELayer(output_dim=(n_class, 1)).call([x_flat, y_flat])
+#    mse_second = MSELayer(output_dim=(n_class, 1)).call([softmax_x, softmax_y])
+    CT_output = Lambda(CT_Loss)([x_flat, y_flat, softmax_x, softmax_y])
+    
     # real probability output
     d_out_real = Dense(1)(d_out_disc)
 
@@ -308,7 +297,7 @@ def build_infogan(generator, discriminator, auxiliary, g_lr=1e-4, beta_1=0.5, be
     averaged_samples = RandomWeightedAverage()([real_samples, gen_out])
     averaged_samples_out, CT_output = discriminator(averaged_samples)
 
-    dis_real, _ = discriminator(real_samples)
+    dis_real, CT_out = discriminator(real_samples)
     dis_gen, _ = discriminator(gen_out)
     partial_gp_loss = partial(gradient_penalty_loss,
                               averaged_samples=averaged_samples,
@@ -319,11 +308,12 @@ def build_infogan(generator, discriminator, auxiliary, g_lr=1e-4, beta_1=0.5, be
                                         generator_input_for_discriminator,
                                         gen_cat_inp_disc],
                                 outputs=[dis_real, dis_gen,
-                                         averaged_samples_out])
+                                         averaged_samples_out, CT_out])
     discriminator_model.compile(optimizer=d_opt, loss=[wasser_loss,
                                                        wasser_loss,
-                                                       partial_gp_loss],
-                                loss_weights=[1, 1, 1])
+                                                       partial_gp_loss,
+                                                       mean_loss],
+                                loss_weights=[1, 1, 1, LAMBDA2])
 
     gan.summary()
     return discriminator_model, gan
@@ -343,7 +333,7 @@ def train_for_epochs(image_set, generator, discriminator_model, gan, losses, n_t
         for ib in range(n_batches):
             idx_batch = idx_randperm[range(ib * batch_size, ib * batch_size + batch_size)]
             X_real = image_set[idx_batch]
-            # X_real = np.expand_dims(X_real, axis=3)
+            X_real = np.expand_dims(X_real, axis=3)
 
             # sampled data
             noise_train, label_train = get_noise(dim_noise, batch_size=batch_size)
@@ -361,11 +351,11 @@ def train_for_epochs(image_set, generator, discriminator_model, gan, losses, n_t
             for _ in range(n_critic):
                 idx_batch = idx_randperm[range(ib * batch_size, ib * batch_size + batch_size)]
                 X_real = image_set[idx_batch]
-                # X_real = np.expand_dims(X_real, axis=3)
+                X_real = np.expand_dims(X_real, axis=3)
 
                 # train real batch
                 d_loss_real = discriminator_model.train_on_batch([X_real, noise_train, label_train],
-                                                                 [positive_y, negative_y, dummy_y])
+                                                                 [positive_y, negative_y, dummy_y, dummy_y])
 
                 d_loss.append(d_loss_real)
 
@@ -409,13 +399,14 @@ if __name__ == "__main__":
     n_save_every = 1
     d_beta1 = 0.5
     d_beta2 = 0.9
-    save_filename_prefix = '/home/SDash2/Desktop/MNIST_Output/infogan_noise%d_cat' % (dim_noise)
-    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    save_filename_prefix = '/Users/Shubham/Desktop/infogan_noise%d_cat' % (dim_noise)
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     # Normalize the data
     x_train = (x_train.astype(np.float32) / 255.0)
 
-    n_rows, n_cols, n_ch = x_train.shape[1:]
+    n_rows, n_cols = x_train.shape[1:]
+    n_ch = 1
     generator = build_generator(n_rows, n_cols, n_out_ch=n_ch, n_first_conv_ch=128, dim_noise=dim_noise,
                                 dim_cat=n_class)
     plot_model(generator, to_file='%s_generator_model.pdf' % save_filename_prefix, show_shapes=True)
