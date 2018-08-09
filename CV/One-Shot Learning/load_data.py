@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Aug  4 16:34:30 2018
-
+Adapted from 
 @author: Shubham
 """
 
