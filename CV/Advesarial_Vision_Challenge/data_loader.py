@@ -2,6 +2,7 @@
 """
 Created on Wed Aug  8 14:33:30 2018
 Data loader for tiny Imagenet, contains 200 classes
+To convert it to Torch tensors
 @author: Shubham Dash
 """
 
@@ -10,8 +11,6 @@ import numpy as np
 import os
 from PIL import Image 
 from collections import defaultdict
-
-filename = r'C:\Users\Shubham\Desktop\data\tiny-imagenet-200\train'
 
 class DataLoader:
     # normalize is a bool for the data normalization
@@ -40,7 +39,7 @@ class DataLoader:
         
     # load function returns a dictionary of images according to classes
     # normalize the data, for network input
-    def load(self):    
+    def load_images(self):    
         # list of all separate image filename
         r = os.listdir(self.path)
         len_1  = len(r)
@@ -57,5 +56,4 @@ class DataLoader:
                 else:
                     self.data[i].append(np.array(Image.open(ele)))    
         return self.data
-        
     
