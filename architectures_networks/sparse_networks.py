@@ -97,7 +97,6 @@ class SparseLayer(Dense):
         config['adjacency_mat'] = np.array(adjacency_mat_as_list)
         return cls(**config)
 
-
 class Data:
     def __init__(self, data_path):
         self.data_path = data_path
@@ -122,6 +121,6 @@ if __name__ == "__main__":
     model.add(SparseLayer(drop_prob=0.2, units=10))
     model.add(Dense(1, activation='sigmoid'))
     # Compile model
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
     # Fit the model
-    model.fit(X_train, y_train, epochs=150)
+    model.fit(X_train, y_train, epochs=150, batch_size=10)
