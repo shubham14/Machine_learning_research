@@ -66,6 +66,7 @@ class PriceETL:
         t_price = price.replace(',', '').lstrip('$')
         return float(t_price)
         
+    # writing in a text file
     def load(self, price: float):
         with open('pricing.txt', 'a+', encoding='utf8') as f:
             f.write((str(price) + '\n'))
