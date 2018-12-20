@@ -64,7 +64,7 @@ class PriceETL:
         
     def transform(self, price: str):
         t_price = price.replace(',', '').lstrip('$')
-        return float(t_price)
+        return t_price
         
     # writing in a text file
     def load(self, price: float):
