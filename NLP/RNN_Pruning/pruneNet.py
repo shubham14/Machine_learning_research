@@ -67,7 +67,6 @@ acc = compute_accuracy(rnn, sequence_length, input_size, test_loader)
 print(acc)
 
 pruned_inds_by_layer = []
-weight_tensors0 = []
 weight_tensors1 = []
 # count = 0
 for p in rnn.parameters():
