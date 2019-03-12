@@ -115,4 +115,6 @@ class Decoder(nn.Module):
         cnn4_out = self.cnn4(cnn3_out)
         X_hat = cnn4_out.view(cnn4_out.size(0), -1)
         return X_hat
-        
+
+if __name__ == "__main__":
+    pass

@@ -32,3 +32,4 @@ def train(epoch, model, train_loader, optimizer, num_classes, use_cuda):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader),
                 loss.data / len(data)))
+
