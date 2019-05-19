@@ -15,6 +15,8 @@ import torch.optim as optim
 import sys
 import argparse
 import os
+import numpy as np
+from model import *
 
 # toggle use of GPUs
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -63,7 +65,11 @@ class Trainer():
         self.dataset = dataset 
     
     def setOptimzer(self, net):
-        pass
+        prune_params = []
+        for params in net.parameters():
+            shape = params.shape
+            mask = np.random.rand(*shape)
+            prune_params += [params[torch.Tensor(mask) > 0.2]]
 
     def train(self, trainloader, net, criterion, optimizer, device, scheduler):
         for epoch in range(100):  # loop over the dataset multiple times
