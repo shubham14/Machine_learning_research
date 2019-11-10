@@ -7,7 +7,7 @@ from tqdm import tqdm
 BATCH_SIZE = 256
 BUFFER_SIZE = 60000
 EPOCHES = 300
-OUTPUT_DIR = "img"
+OUTPUT_DIR = ""
 
 mnist = keras.datasets.mnist
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
@@ -121,12 +121,9 @@ def training(dataset, epoches):
             
         ## After ith epoch plot image 
         if (epoch % 2) == 0: 
-            fake_image = tf.reshape(generator(100), shape = (28,28))
+            fake_image = tf.reshape(generator.generate_noise(28, 28), shape = (28,28))
             print("{}/{} epoches".format(epoch, epoches))
             #plt.imshow(fake_image, cmap = "gray")
             plt.imsave("{}/{}.png".format(OUTPUT_DIR,epoch),fake_image, cmap = "gray")      
 
 training(train_dataset, 10)
-
-generator = Generator()
-generator(100)
